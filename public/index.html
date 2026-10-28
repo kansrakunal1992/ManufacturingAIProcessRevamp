@@ -1,0 +1,52 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Research Lab</title>
+<style>
+:root{--bg:#f5f8f8;--card:#fff;--ink:#1f2d33;--mute:#6a7b82;--line:#e1e9ea;--acc:#2f6f7e;--accbg:#e4f0f2;--ok:#3d7a54;--okbg:#e5f2ea;--warn:#8a6a1f;--warnbg:#f8f0d9;--bad:#a14a4a;--badbg:#f6e4e4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px 16px 56px}h1{font-size:1.4rem;margin:8px 0 2px}h2{font-size:1.05rem;margin:28px 0 10px}
+.sub{color:var(--mute);font-size:.9rem}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+button{font:inherit;background:var(--acc);color:#fff;border:0;border-radius:10px;padding:9px 14px;cursor:pointer}button.ghost{background:var(--accbg);color:var(--acc)}button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #9cc5cd;outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.hero{border-left:5px solid var(--acc);font-size:1.05rem}.chip{display:inline-block;font-size:.8rem;padding:2px 9px;border-radius:99px;background:var(--accbg);color:var(--acc)}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn)}.chip.bad{background:var(--badbg);color:var(--bad)}.chip.grey{background:#eceff0;color:var(--mute)}
+.bar{height:8px;background:#e9eff0;border-radius:9px;overflow:hidden;margin:8px 0 4px}.bar i{display:block;height:100%;background:var(--acc)}
+.steps{display:flex;gap:4px;margin:8px 0}.steps b{flex:1;height:5px;border-radius:3px;background:#dde7e8}.steps b.on{background:var(--acc)}
+summary{cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}.row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.k{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.k div{background:var(--bg);border-radius:10px;padding:8px 10px;font-size:.9rem}.k b{display:block;font-size:1.05rem}
+ul{padding-left:18px;margin:6px 0}a{color:var(--acc)}.note{font-size:.85rem;color:var(--mute)}pre{white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:10px;font:inherit;font-size:.9rem}
+</style></head><body><main>
+<div class="top"><div><h1>Manufacturing Research Lab</h1><div class="sub" id="meta">Loading…</div></div><button id="go">Run now</button></div>
+<div id="app"></div></main>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const ST=['learn','options','simulate','stress','pilot'],LAB={learn:'Learning about the part',options:'Looking for cheaper options',simulate:'Running simulations',stress:'Trying to break the idea',pilot:'Supplier pilot',pilot_ready:'Ready for supplier outreach'};
+const dt=x=>x?new Date(x).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'';
+const n=(x,d=0)=>x==null||isNaN(x)?'unknown':Number(x).toFixed(d);
+let D;
+function cand(c){const s=c.state||{},m=s.sim,st=ST.indexOf(c.stage===('pilot_ready')?'pilot':c.stage);
+ const sim=m?`<div class="k"><div>Typical saving<b>${n(m.p50)}%</b></div><div>Range (likely)<b>${n(m.p10)}% to ${n(m.p90)}%</b></div><div>Worst case<b>${n(m.pessimistic)}%</b></div><div>Time saved per part<b>${n(m.timeSavedMin,1)} min</b></div><div>Break-even<b>${m.breakeven?Math.round(m.breakeven)+' pieces':'unknown'}</b></div><div>Inputs with sources<b>${Math.round(m.sourced*100)}%</b></div></div><p class="note">Simulated from estimates, not supplier quotes.</p>`:'<p class="note">No simulation yet.</p>';
+ const fl=(s.gateFails||[]).map(f=>`<li>${esc(f)}</li>`).join(''),pl=s.pilot;
+ return `<details class="card"><summary><div class="row"><strong>${esc(c.name)}</strong><span class="chip ${c.stage==='pilot_ready'?'ok':''}">${LAB[c.stage]||esc(c.stage)}</span></div>
+ <div class="steps">${ST.map((_,i)=>`<b class="${i<=st?'on':''}"></b>`).join('')}</div>
+ <div class="bar"><i style="width:${Math.min(100,c.readiness||0)}%"></i></div><div class="note">Confidence the alternative is cheaper: ${Math.round(c.readiness||0)}% (target ${D.threshold}%)</div>
+ ${fl?`<div class="note">Not ready: ${esc((s.gateFails||[])[0])}</div>`:''}</summary>${sim}
+ ${fl?`<p><strong>Still blocking:</strong></p><ul>${fl}</ul>`:''}
+ ${s.stress?.fail_reasons?.length?`<p><strong>Strongest reasons it could fail:</strong></p><ul>${s.stress.fail_reasons.slice(0,4).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
+ ${pl?`<p><strong>Supplier shortlist (verify before contacting):</strong></p><ul>${(pl.suppliers||[]).map(x=>`<li>${esc(x.name)}, ${esc(x.city||'')} <a href="${esc(x.evidence_url)}" target="_blank" rel="noopener noreferrer">source</a></li>`).join('')||'<li>None verified yet</li>'}</ul><pre id="q-${esc(c.id)}">${esc(pl.quote_request_message||'')}</pre><button class="ghost" onclick="cp('q-${esc(c.id)}')">Copy quote request</button>`:''}</details>`;}
+function cp(id){const t=document.getElementById(id).innerText;try{navigator.clipboard.writeText(t)}catch(e){const r=document.createRange();r.selectNode(document.getElementById(id));getSelection().removeAllRanges();getSelection().addRange(r)}}
+function render(){const r=D.runs,l=r[0],cs=D.candidates,spent=r.filter(x=>x.started_at?.slice(0,10)===new Date().toISOString().slice(0,10)).reduce((a,x)=>a+(x.tokens||0),0);
+ $('#meta').textContent=D.busy?'A run is in progress…':l?'Last run '+dt(l.started_at):'No runs yet. Tap Run now.';
+ const todo=cs.flatMap(c=>(c.state?.todos||[]).map(t=>`<li><strong>${esc(c.name)}:</strong> ${esc(t)}</li>`)),failed=r.filter(x=>x.status==='failed').slice(0,1);
+ const chg=cs.filter(c=>c.state?.sim&&c.state?.prevSim).map(c=>`<li>${esc(c.name)}: typical saving ${n(c.state.prevSim.p50)}% to ${n(c.state.sim.p50)}%</li>`).join('');
+ $('#app').innerHTML=(failed.length&&l&&l.status==='failed'?`<div class="card" style="border-color:var(--bad)"><span class="chip bad">Last run failed</span><p>${esc(l.error)}</p></div>`:'')
+ +(l?`<h2>What happened last</h2><div class="card hero"><div class="note">${esc(c2(l))} · ${dt(l.started_at)}</div><p>${esc(l.plain||'Running…')}</p></div>`:'')
+ +(chg?`<h2>What changed</h2><div class="card"><ul>${chg}</ul></div>`:'')
+ +(todo.length?`<h2>Needs you</h2><div class="card"><ul>${todo.join('')}</ul></div>`:'')
+ +`<h2>Ideas under study</h2>${cs.map(cand).join('')||'<p class="note">Nothing yet. The first run adds all five ideas.</p>'}`
+ +`<h2>Evidence collected</h2>${D.evidence.slice(0,15).map(e=>`<div class="card"><span class="chip ${e.category==='verified'?'ok':e.category==='estimate'?'warn':'grey'}">${e.category==='verified'?'Verified from a source':e.category==='estimate'?'Estimate':'AI guess, unproven'}</span> ${esc(e.claim)} ${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">source</a>`:''}<div class="note">${dt(e.created_at)}</div></div>`).join('')||'<p class="note">No evidence yet.</p>'}`
+ +`<h2>Run history</h2>${r.slice(0,12).map(x=>`<div class="card"><div class="row"><span class="note">${dt(x.started_at)}</span><span class="chip ${x.status==='ok'?'ok':x.status==='failed'?'bad':'grey'}">${esc(x.status)}</span></div><div>${esc(x.plain||'')}</div></div>`).join('')}`
+ +`<p class="note">AI usage today: ${spent.toLocaleString('en-IN')} tokens. <a href="/api/export.json">Download all data</a></p>`;}
+const c2=x=>(D.candidates.find(c=>c.id===x.candidate_id)||{}).name||'Run';
+async function load(){try{D=await (await fetch('/api/state')).json();render();}catch(e){$('#meta').textContent='Could not load data. Check the Supabase variables.';}}
+$('#go').onclick=async()=>{$('#go').disabled=true;await fetch('/api/run',{method:'POST'});$('#meta').textContent='Run started. Results appear in about a minute.';setTimeout(()=>{$('#go').disabled=false},5000);};
+load();setInterval(load,20000);
+</script></body></html>

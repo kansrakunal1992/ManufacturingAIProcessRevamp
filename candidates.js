@@ -1,0 +1,7 @@
+module.exports=[
+{id:'gaskets',name:'Rubber and foam gaskets',product:'Simple flat gasket made to a drawing',base:'Hand cutting or die cutting',alts:'Digital knife or waterjet cutting, better sheet nesting',limits:'Material, thickness, temperature, chemicals matter. No pressure-critical or safety-critical use.'},
+{id:'brackets',name:'Sheet-metal brackets and small enclosures',product:'Simple mounting bracket, plate or small enclosure',base:'Machining from solid block, or cut-and-weld',alts:'Laser cut and bend, merging several parts into one',limits:'Strength, thickness, tolerances, finishing (paint or plating) must be in the cost.'},
+{id:'heatsinks',name:'Aluminium heatsinks',product:'Simple heatsink for a non-critical application',base:'Custom CNC machined part',alts:'Standard ready-made heatsink, cut standard extrusion, casting at volume',limits:'Cooling performance is critical and needs thermal evidence or testing.'},
+{id:'plastic',name:'Plastic clips, knobs, holders and spacers',product:'Non-safety-critical clip, knob, cable holder or spacer',base:'Buying an existing standard part',alts:'Low-volume 3D printing, injection moulding, redesign',limits:'Strength, heat, sunlight, material. Mould cost must be recovered.'},
+{id:'jigs',name:'Workshop jigs and assembly guides',product:'Drill guide, positioning block or assembly holder',base:'Manual positioning without a jig',alts:'Existing fixture, 3D-printed jig, laser-cut or machined fixture',limits:'Accuracy, wear, clamping and worker safety. Value is the buyer’s time saved.'}
+];
