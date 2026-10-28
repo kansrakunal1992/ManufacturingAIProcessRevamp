@@ -18,7 +18,7 @@ ul{padding-left:18px;margin:6px 0}a{color:var(--acc)}.note{font-size:.85rem;colo
 <div id="app"></div></main>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const ST=['learn','options','simulate','stress','pilot'],LAB={learn:'Learning about the part',options:'Looking for cheaper options',simulate:'Running simulations',stress:'Trying to break the idea',pilot:'Supplier pilot',pilot_ready:'Ready for supplier outreach'};
+const ST=['learn','options','ideas','simulate','stress','pilot'],LAB={ideas:'Brainstorming bold ideas',learn:'Learning about the part',options:'Looking for cheaper options',simulate:'Running simulations',stress:'Trying to break the idea',pilot:'Supplier pilot',pilot_ready:'Ready for supplier outreach'};
 const dt=x=>x?new Date(x).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'';
 const n=(x,d=0)=>x==null||isNaN(x)?'unknown':Number(x).toFixed(d);
 let D;
@@ -28,10 +28,16 @@ function cand(c){const s=c.state||{},m=s.sim,st=ST.indexOf(c.stage===('pilot_rea
  return `<details class="card"><summary><div class="row"><strong>${esc(c.name)}</strong><span class="chip ${c.stage==='pilot_ready'?'ok':''}">${LAB[c.stage]||esc(c.stage)}</span></div>
  <div class="steps">${ST.map((_,i)=>`<b class="${i<=st?'on':''}"></b>`).join('')}</div>
  <div class="bar"><i style="width:${Math.min(100,c.readiness||0)}%"></i></div><div class="note">Confidence the alternative is cheaper: ${Math.round(c.readiness||0)}% (target ${D.threshold}%)</div>
- ${fl?`<div class="note">Not ready: ${esc((s.gateFails||[])[0])}</div>`:''}</summary>${sim}
+ ${fl?`<div class="note">Not ready: ${esc((s.gateFails||[])[0])}</div>`:''}</summary>${ideasBlock(s)}${sim}
  ${fl?`<p><strong>Still blocking:</strong></p><ul>${fl}</ul>`:''}
  ${s.stress?.fail_reasons?.length?`<p><strong>Strongest reasons it could fail:</strong></p><ul>${s.stress.fail_reasons.slice(0,4).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
- ${pl?`<p><strong>Supplier shortlist (verify before contacting):</strong></p><ul>${(pl.suppliers||[]).map(x=>`<li>${esc(x.name)}, ${esc(x.city||'')} <a href="${esc(x.evidence_url)}" target="_blank" rel="noopener noreferrer">source</a></li>`).join('')||'<li>None verified yet</li>'}</ul><pre id="q-${esc(c.id)}">${esc(pl.quote_request_message||'')}</pre><button class="ghost" onclick="cp('q-${esc(c.id)}')">Copy quote request</button>`:''}</details>`;}
+ ${pl?`<p><strong>Supplier shortlist (verify before contacting):</strong></p><ul>${(pl.suppliers||[]).map(x=>`<li>${esc(x.name)}, ${esc(x.city||'')} ${x.origin==='overseas'?'<span class="chip warn">Overseas: add import costs</span>':''} <a href="${esc(x.evidence_url)}" target="_blank" rel="noopener noreferrer">source</a></li>`).join('')||'<li>None verified yet</li>'}</ul><pre id="q-${esc(c.id)}">${esc(pl.quote_request_message||'')}</pre><button class="ghost" onclick="cp('q-${esc(c.id)}')">Copy quote request</button>`:''}</details>`;}
+const TY={supplier_site:'Supplier’s own claim',marketplace_listing:'Marketplace listing',independent:'Independent source',government_portal:'Government portal'};
+function badge(e){const ok=e.category==='verified'||e.category==='sourced';return `<span class="chip ${ok?'ok':e.category==='estimate'?'warn':'grey'}">${ok?'Sourced':e.category==='estimate'?'Estimate':'AI guess, unproven'}</span>${TY[e.source_type]?` <span class="chip grey">${TY[e.source_type]}</span>`:''}`;}
+function ideasBlock(s){const i=s.ideas;if(!i)return '';const ch=i.chosen;
+ return `<p><strong>Boldest idea still standing:</strong> ${ch?esc(ch.name)+'. '+esc(ch.why_cheaper||''):'none yet, it will try again next run'}</p>`
+ +((i.verdicts||[]).length?`<ul>${i.verdicts.map(v=>`<li>${esc(v.name)}: <span class="chip ${v.verdict==='supported'?'ok':v.verdict==='killed'?'bad':'warn'}">${esc(v.verdict)}</span> ${esc(v.reason||'')}</li>`).join('')}</ul>`:'')
+ +((s.rejected||[]).length?`<p class="note">Dropped so far: ${s.rejected.map(esc).join(', ')}</p>`:'');}
 function cp(id){const t=document.getElementById(id).innerText;try{navigator.clipboard.writeText(t)}catch(e){const r=document.createRange();r.selectNode(document.getElementById(id));getSelection().removeAllRanges();getSelection().addRange(r)}}
 function render(){const r=D.runs,l=r[0],cs=D.candidates,spent=r.filter(x=>x.started_at?.slice(0,10)===new Date().toISOString().slice(0,10)).reduce((a,x)=>a+(x.tokens||0),0);
  $('#meta').textContent=D.busy?'A run is in progress…':l?'Last run '+dt(l.started_at):'No runs yet. Tap Run now.';
@@ -42,7 +48,7 @@ function render(){const r=D.runs,l=r[0],cs=D.candidates,spent=r.filter(x=>x.star
  +(chg?`<h2>What changed</h2><div class="card"><ul>${chg}</ul></div>`:'')
  +(todo.length?`<h2>Needs you</h2><div class="card"><ul>${todo.join('')}</ul></div>`:'')
  +`<h2>Ideas under study</h2>${cs.map(cand).join('')||'<p class="note">Nothing yet. The first run adds all five ideas.</p>'}`
- +`<h2>Evidence collected</h2>${D.evidence.slice(0,15).map(e=>`<div class="card"><span class="chip ${e.category==='verified'?'ok':e.category==='estimate'?'warn':'grey'}">${e.category==='verified'?'Verified from a source':e.category==='estimate'?'Estimate':'AI guess, unproven'}</span> ${esc(e.claim)} ${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">source</a>`:''}<div class="note">${dt(e.created_at)}</div></div>`).join('')||'<p class="note">No evidence yet.</p>'}`
+ +`<h2>Evidence collected</h2><p class="note">Sourced means it traces to a link, not that it is confirmed. Only your own written quotes and tests count as verified.</p>${D.evidence.slice(0,15).map(e=>`<div class="card">${badge(e)} ${esc(e.claim)} ${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">source</a>`:''}<div class="note">${dt(e.created_at)}</div></div>`).join('')||'<p class="note">No evidence yet.</p>'}`
  +`<h2>Run history</h2>${r.slice(0,12).map(x=>`<div class="card"><div class="row"><span class="note">${dt(x.started_at)}</span><span class="chip ${x.status==='ok'?'ok':x.status==='failed'?'bad':'grey'}">${esc(x.status)}</span></div><div>${esc(x.plain||'')}</div></div>`).join('')}`
  +`<p class="note">AI usage today: ${spent.toLocaleString('en-IN')} tokens. <a href="/api/export.json">Download all data</a></p>`;}
 const c2=x=>(D.candidates.find(c=>c.id===x.candidate_id)||{}).name||'Run';
